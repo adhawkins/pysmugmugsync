@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     # Application name:
@@ -29,4 +29,8 @@ setup(
     # Dependent packages (distributions)
     install_requires=[
     ],
+
+    entry_points = {
+        "console_scripts": ['pysmugmugsync = smugmugsyncutils.Main:main']
+    },
 )
