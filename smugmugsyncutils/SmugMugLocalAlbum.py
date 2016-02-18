@@ -9,9 +9,10 @@ class SmugMugLocalAlbum:
 	
 	def __init__(self, directory, parent = None):
 		self.directory = directory
+
 		self.name = os.path.basename(os.path.normpath(directory))
-		self.album_name = self.name.replace(" ", "-")
-		self.album_name = self.album_name.translate(None, '()')
+		self.url_name = self.name.replace(" ", "-").capitalize()
+		self.url_name = self.url_name.translate(None, '()\'",;:&')[:30]
 		self.parent = parent
 		self.children = []
 		self.items = []

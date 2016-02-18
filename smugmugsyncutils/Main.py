@@ -14,7 +14,50 @@ def print_album(album):
 	print str(album)
 	for child in album.children:
 		print_album(child)
-		
+
+def find_child_node(children, child_name):
+	for child in children:
+		if child.url_name == child_name:
+			return child
+
+def find_image(images, image_filename):
+	for image in images:
+		if image.filename == image_filename:
+			return image
+
+def sync_album(connection, local, remote):
+	print "Syncing local album " + local.url_name + " with remote " + remote.url_name
+
+	remoteimages = remote.get_images(connection)
+
+	for localimage in local.items:
+		print "Checking " + localimage
+
+		if not find_image(remoteimages, localimage):
+			print "Not found, uploading"
+			connection.upload_image(local.directory + "/" + localimage, remote.uri)
+
+def sync_node(connection, local, remote):
+	print "Syncing node " + local.name + " with " + remote.name
+	remote_children = remote.get_children(connection)
+	
+	for child in local.children:
+		if child.items:
+			node = find_child_node(remote_children, child.url_name)
+			if not node:
+				print "Creating album " + child.url_name
+				node=Node(remote.create_child_album(connection, child.name, child.url_name, 'Public', child.name))
+				
+			album=Album(SmugMugv2Utils.get_album(connection, node.album))
+			sync_album(connection, child, album)
+		else:
+			node = find_child_node(remote_children, child.url_name)
+			if not node:
+				print "Creating node " + child.url_name
+				node=Node(remote.create_child_folder(connection, child.name, child.url_name, 'Public'))
+
+			sync_node(connection, child, node)
+
 def main():
 	parser = ArgumentParser()
 	parser.add_argument("site", help="the site to upload to")
@@ -50,11 +93,5 @@ def main():
 	
 	root = SmugMugLocalAlbum(args.path)
 
-	for child in root.children:
-		if child.items:
-			node=Node(root_node.create_child_album(connection, child.name, child.album_name, 'Public', child.name))
-			pprint(node.album)
-			album=Album(SmugMugv2Utils.get_album(connection, node.album))
-		else:
-			node=Node(root_node.create_child_folder(connection, child.name, child.album_name, 'Public'))
+	sync_node(connection, root, root_node)
 			
