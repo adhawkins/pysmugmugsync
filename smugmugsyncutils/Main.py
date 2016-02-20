@@ -38,16 +38,18 @@ def sync_album(connection, local, remote):
 			connection.upload_image(local.directory + "/" + localimage, remote.uri)
 
 def sync_node(connection, local, remote):
+	global root_node
+
 	print "Syncing node " + local.name + " with " + remote.name
 	remote_children = remote.get_children(connection)
-	
+
 	for child in local.children:
 		if child.items:
 			node = find_child_node(remote_children, child.url_name)
 			if not node:
 				print "Creating album " + child.url_name
 				node=Node(remote.create_child_album(connection, child.name, child.url_name, 'Public', child.name))
-				
+
 			album=Album(SmugMugv2Utils.get_album(connection, node.album))
 			sync_album(connection, child, album)
 		else:
@@ -58,7 +60,18 @@ def sync_node(connection, local, remote):
 
 			sync_node(connection, child, node)
 
+	for child in remote_children:
+		if not find_child_node(local.children, child.url_name):
+			if child.uri == root_node.uri:
+				import sys
+				print "*** About to delete root node"
+				sys.exit(1)
+
+			child.delete_node(connection)
+
 def main():
+	global root_node
+
 	parser = ArgumentParser()
 	parser.add_argument("site", help="the site to upload to")
 	parser.add_argument("path", help="the path containing local photos")
@@ -90,8 +103,8 @@ def main():
 	user = User(SmugMugv2Utils.get_authorized_user(connection))
 	print "User: " + user.nickname + " (" + user.name + ")"
 	root_node = Node(SmugMugv2Utils.get_node(connection,user.node))
-	
+
 	root = SmugMugLocalAlbum(args.path)
 
 	sync_node(connection, root, root_node)
-			
+
