@@ -20,10 +20,15 @@ def find_child_node(children, child_name):
 		if child.url_name == child_name:
 			return child
 
-def find_image(images, image_filename):
-	for image in images:
-		if image.filename == image_filename:
-			return image
+def find_remote_image(remote_images, local_image_filename):
+	for remote_image in remote_images:
+		if remote_image.filename == local_image_filename:
+			return remote_image
+
+def find_local_image(local_images, remote_image):
+	for local_image in local_images:
+		if local_image == remote_image.filename:
+			return local_image
 
 def sync_album(connection, local, remote):
 	print "Syncing local album " + local.url_name + " with remote " + remote.url_name
@@ -33,9 +38,17 @@ def sync_album(connection, local, remote):
 	for localimage in local.items:
 		print "Checking " + localimage
 
-		if not find_image(remoteimages, localimage):
+		if not find_remote_image(remoteimages, localimage):
 			print "Not found, uploading"
 			connection.upload_image(local.directory + "/" + localimage, remote.uri)
+
+	print "Checking images to delete"
+	for remoteimage in remoteimages:
+		print "Checking " + remoteimage.filename
+
+		if not find_local_image(local.items, remoteimage):
+			print "Not found, deleting"
+			remoteimage.delete_album_image(connection)
 
 def sync_node(connection, local, remote):
 	global root_node
