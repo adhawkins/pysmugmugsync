@@ -5,20 +5,19 @@ from sys import stdout, stdin
 from os import linesep
 from json import loads
 from SmugMugLocalAlbum import SmugMugLocalAlbum
-from pprint import pprint
 
 api_key = "LXTk156AmDT0IhjLuDetBUwP9nWKCppg"
 api_secret = "be735fbb3b44698d72506b29e21a434c"
 
-def print_album(album):
-	print str(album)
-	for child in album.children:
-		print_album(child)
+def find_remote_child_node(remote_children, uri):
+	for remote_child in remote_children:
+		if remote_child.uri == uri:
+			return remote_child
 
-def find_child_node(children, child_name):
-	for child in children:
-		if child.url_name == child_name:
-			return child
+def find_local_child_node(local_children, uri):
+	for local_child in local_children:
+		if local_child.json["uri"] == uri:
+			return local_child
 
 def find_remote_image(remote_images, local_image_filename):
 	for remote_image in remote_images:
@@ -31,50 +30,86 @@ def find_local_image(local_images, remote_image):
 			return local_image
 
 def sync_album(connection, local, remote):
-	print "Syncing local album " + local.url_name + " with remote " + remote.url_name
+	print "Syncing local album " + local.json["url_name"] + " with remote " + remote.url_name
 
 	remoteimages = remote.get_images(connection)
 
-	for localimage in local.items:
-		print "Checking " + localimage
+	if local.directory != root_dir:
+		album_patch={}
 
+		if local.json["description"] != remote.description:
+			album_patch["Description"]=local.json["description"]
+
+		if local.json["url_name"] != remote.url_name:
+			album_patch["UrlName"]=local.json["url_name"]
+
+		if local.json["keywords"] != remote.keywords:
+			album_patch["Keywords"]=local.json["keywords"]
+
+		if local.json["name"] != remote.name:
+			album_patch["Name"]=local.json["name"]
+
+		if local.json["album_sort_method"] != remote.sort_method:
+			album_patch["SortMethod"]=local.json["album_sort_method"]
+
+		if album_patch:
+			remote.change_album(connection, album_patch)
+
+	for localimage in local.items:
 		if not find_remote_image(remoteimages, localimage):
-			print "Not found, uploading"
+			print "Not found, uploading " + localimage
 			connection.upload_image(local.directory + "/" + localimage, remote.uri)
 
-	print "Checking images to delete"
 	for remoteimage in remoteimages:
-		print "Checking " + remoteimage.filename
-
 		if not find_local_image(local.items, remoteimage):
-			print "Not found, deleting"
+			print "Not found, deleting " + remoteimage.filename
 			remoteimage.delete_album_image(connection)
+
+	local.save_json()
 
 def sync_node(connection, local, remote):
 	global root_node
+	global root_dir
 
-	print "Syncing node " + local.name + " with " + remote.name
+	print "Syncing node " + local.json["url_name"] + " with " + remote.url_name
 	remote_children = remote.get_children(connection)
+
+	if local.directory != root_dir:
+		node_patch={}
+
+		if local.json["description"] != remote.description:
+			node_patch["Description"]=local.json["description"]
+
+		if local.json["url_name"] != remote.url_name:
+			node_patch["UrlName"]=local.json["url_name"]
+
+		if local.json["node_sort_method"] != remote.sort_method:
+			node_patch["SortMethod"]=local.json["node_sort_method"]
+
+		if node_patch:
+			remote.change_node(connection, node_patch)
 
 	for child in local.children:
 		if child.items:
-			node = find_child_node(remote_children, child.url_name)
+			node = find_remote_child_node(remote_children, child.json["uri"])
 			if not node:
-				print "Creating album " + child.url_name
-				node=Node(remote.create_child_album(connection, child.name, child.url_name, 'Public', child.name))
+				print "Creating album " + child.json["url_name"]
+				node=Node(remote.create_child_album(connection, child.json["name"], child.json["url_name"], 'Public', child.json["description"]))
+				child.json["uri"]=node.uri
 
 			album=Album(SmugMugv2Utils.get_album(connection, node.album))
 			sync_album(connection, child, album)
 		else:
-			node = find_child_node(remote_children, child.url_name)
+			node = find_remote_child_node(remote_children, child.json["uri"])
 			if not node:
-				print "Creating node " + child.url_name
-				node=Node(remote.create_child_folder(connection, child.name, child.url_name, 'Public'))
+				print "Creating node " + child.json["url_name"]
+				node=Node(remote.create_child_folder(connection, child.json["title"], child.json["url_name"], 'Public'))
+				child.json["uri"]=node.uri
 
 			sync_node(connection, child, node)
 
 	for child in remote_children:
-		if not find_child_node(local.children, child.url_name):
+		if not find_local_child_node(local.children, child.uri):
 			if child.uri == root_node.uri:
 				import sys
 				print "*** About to delete root node"
@@ -82,8 +117,11 @@ def sync_node(connection, local, remote):
 
 			child.delete_node(connection)
 
+	local.save_json()
+
 def main():
 	global root_node
+	global root_dir
 
 	parser = ArgumentParser()
 	parser.add_argument("site", help="the site to upload to")
@@ -92,6 +130,7 @@ def main():
 	args = parser.parse_args()
 	print "Site: " + args.site
 	print "Path: " + args.path
+	root_dir=args.path
 
 	config = Config(args.site)
 
