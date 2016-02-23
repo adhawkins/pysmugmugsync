@@ -44,6 +44,15 @@ class SmugMugLocalAlbum:
 		else:
 			self.json.pop("album_sort_method", None)
 
+		if "files" in self.json:
+			remove_items=[]
+			for file in self.json["files"]:
+				if not file in entries:
+					remove_items.append(file)
+
+			for remove in remove_items:
+				self.json["files"].pop(remove, None)
+
 	def default_album(self):
 		if not "description" in self.json:
 			self.json["description"]=""
