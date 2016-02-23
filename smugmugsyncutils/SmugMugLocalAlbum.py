@@ -33,7 +33,8 @@ class SmugMugLocalAlbum:
 				self.children.append(SmugMugLocalAlbum(directory=os.path.join(self.directory,entry), parent=self))
 			else:
 				if os.path.isfile(os.path.join(self.directory,entry)) and \
-						entry != "smugmug.json":
+						entry != "smugmug.json" and \
+						os.path.splitext(entry)[1] != ".db":
 					self.default_album()
 					self.default_album_image(entry)
 
