@@ -99,8 +99,6 @@ class SmugMugLocalAlbum:
 			self.json["node_sort_method"]="Name"
 
 	def save_json(self):
-		from pprint import pprint
-
 		if self.json != self.orig_json:
 			with open(self.json_file, "w") as f:
 				dump(self.json, f, indent=2)
