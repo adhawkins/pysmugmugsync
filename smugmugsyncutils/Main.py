@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from Config import Config
-from smugmugv2py import Connection, User, Node, Album, SmugMugv2Utils
+from smugmugv2py import Connection, User, Node, Album, AlbumImage
 from sys import stdout, stdin
 from os import linesep
 from json import loads
@@ -9,14 +9,32 @@ from SmugMugLocalAlbum import SmugMugLocalAlbum
 api_key = "LXTk156AmDT0IhjLuDetBUwP9nWKCppg"
 api_secret = "be735fbb3b44698d72506b29e21a434c"
 
-def find_remote_child_node(remote_children, uri):
+def update_image(connection, remote_image, image_json):
+	image_patch={}
+
+	if image_json["keywords"] != remote_image.keywords:
+		image_patch["Keywords"]=image_json["keywords"]
+
+	if image_json["caption"] != remote_image.caption:
+		image_patch["Caption"]=image_json["caption"]
+
+	if image_json["title"] != remote_image.title:
+		image_patch["Title"]=image_json["title"]
+
+	if image_patch:
+		print "Updating image " + remote_image.filename
+		remote_image.change_album_image(connection, image_patch)
+
+def find_remote_child_node(remote_children, uri, url_name):
 	for remote_child in remote_children:
-		if remote_child.uri == uri:
+		if (uri and remote_child.uri == uri) or \
+				(url_name and remote_child.url_name == url_name):
 			return remote_child
 
-def find_local_child_node(local_children, uri):
+def find_local_child_node(local_children, uri, url_name):
 	for local_child in local_children:
-		if local_child.json["uri"] == uri:
+		if (uri and local_child.json["uri"] == uri) or \
+				(url_name and local_child.json["url_name"] == url_name):
 			return local_child
 
 def find_remote_image(remote_images, local_image_filename):
@@ -56,9 +74,13 @@ def sync_album(connection, local, remote):
 			remote.change_album(connection, album_patch)
 
 	for localimage in local.items:
-		if not find_remote_image(remoteimages, localimage):
+		remote_image = find_remote_image(remoteimages, localimage)
+		if not remote_image:
 			print "Not found, uploading " + localimage
-			connection.upload_image(local.directory + "/" + localimage, remote.uri)
+			response = connection.upload_image(local.directory + "/" + localimage, remote.uri)
+			remote_image = AlbumImage.get_album_image(connection, response["Image"]["ImageUri"])
+
+		update_image(connection, remote_image, local.json["files"][localimage])
 
 	for remoteimage in remoteimages:
 		if not find_local_image(local.items, remoteimage):
@@ -91,25 +113,28 @@ def sync_node(connection, local, remote):
 
 	for child in local.children:
 		if child.items:
-			node = find_remote_child_node(remote_children, child.json["uri"])
+			node = find_remote_child_node(remote_children, child.json["uri"], child.json["url_name"])
 			if not node:
 				print "Creating album " + child.json["url_name"]
-				node=Node(remote.create_child_album(connection, child.json["name"], child.json["url_name"], 'Public', child.json["description"]))
-				child.json["uri"]=node.uri
+				node=remote.create_child_album(connection, child.json["name"], child.json["url_name"], 'Public', child.json["description"])
 
-			album=Album(SmugMugv2Utils.get_album(connection, node.album))
+			child.json["uri"]=node.uri
+
+			album=Album.get_album(connection, node.album)
 			sync_album(connection, child, album)
 		else:
-			node = find_remote_child_node(remote_children, child.json["uri"])
+			node = find_remote_child_node(remote_children, child.json["uri"], child.json["url_name"])
 			if not node:
 				print "Creating node " + child.json["url_name"]
-				node=Node(remote.create_child_folder(connection, child.json["title"], child.json["url_name"], 'Public'))
-				child.json["uri"]=node.uri
+				node=remote.create_child_folder(connection, child.json["title"], child.json["url_name"], 'Public')
+
+			child.json["uri"]=node.uri
 
 			sync_node(connection, child, node)
 
+	print "Checking to delete remote children in " + local.directory
 	for child in remote_children:
-		if not find_local_child_node(local.children, child.uri):
+		if not find_local_child_node(local.children, child.uri, child.url_name):
 			if child.uri == root_node.uri:
 				import sys
 				print "*** About to delete root node"
@@ -152,9 +177,9 @@ def main():
 		config.write(args.site)
 
 	connection.authorise_connection(config.token, config.secret)
-	user = User(SmugMugv2Utils.get_authorized_user(connection))
+	user = User.get_authorized_user(connection)
 	print "User: " + user.nickname + " (" + user.name + ")"
-	root_node = Node(SmugMugv2Utils.get_node(connection,user.node))
+	root_node = Node.get_node(connection,user.node)
 
 	root = SmugMugLocalAlbum(args.path)
 
