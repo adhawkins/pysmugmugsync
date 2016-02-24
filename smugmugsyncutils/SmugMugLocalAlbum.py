@@ -2,6 +2,7 @@ import os.path
 from copy import deepcopy
 from json import load, dump
 from collections import OrderedDict
+from datetime import datetime
 
 class SmugMugLocalAlbum:
 	def __init__(self, directory, parent = None):
@@ -38,7 +39,11 @@ class SmugMugLocalAlbum:
 					self.default_album()
 					self.default_album_image(entry)
 
-					self.items.append(entry)
+					self.items.append({
+						"name": entry,
+						"mtime": datetime.fromtimestamp(os.path.getmtime(directory + "/" + entry)),
+						"size": os.path.getsize(directory + "/" + entry)
+					})
 
 		if self.items:
 			self.json.pop("node_sort_method", None)

@@ -5,6 +5,7 @@ from sys import stdout, stdin
 from os import linesep
 from json import loads
 from SmugMugLocalAlbum import SmugMugLocalAlbum
+from requests import exceptions
 
 api_key = "LXTk156AmDT0IhjLuDetBUwP9nWKCppg"
 api_secret = "be735fbb3b44698d72506b29e21a434c"
@@ -44,7 +45,7 @@ def find_remote_image(remote_images, local_image_filename):
 
 def find_local_image(local_images, remote_image):
 	for local_image in local_images:
-		if local_image == remote_image.filename:
+		if local_image["name"] == remote_image.filename:
 			return local_image
 
 def sync_album(connection, local, remote):
@@ -74,13 +75,40 @@ def sync_album(connection, local, remote):
 			remote.change_album(connection, album_patch)
 
 	for localimage in local.items:
-		remote_image = find_remote_image(remoteimages, localimage)
-		if not remote_image:
-			print "Not found, uploading " + localimage
-			response = connection.upload_image(local.directory + "/" + localimage, remote.uri)
-			remote_image = AlbumImage.get_album_image(connection, response["Image"]["ImageUri"])
+		remote_image = find_remote_image(remoteimages, localimage["name"])
+		do_upload = False
+		if remote_image:
+			#print "Image: " + localimage["name"] + \
+			#		", localtime: " + str(localimage["mtime"]) + \
+			#		", remotetime: " + str(remote_image.last_updated) + \
+			#		", localsize: " + str(localimage["size"]) + \
+			#		", remotesize: " + str(remote_image.archived_size)
 
-		update_image(connection, remote_image, local.json["files"][localimage])
+			if localimage["mtime"] > remote_image.last_updated:
+				print "Local is newer - updating"
+				do_upload = True
+
+			if localimage["size"] != remote_image.archived_size:
+				print "Sizes don't match - updating"
+				do_upload = True
+
+		else:
+			print("Not found")
+			do_upload = True
+
+		if do_upload:
+			print "Uploading " + localimage["name"]
+			try:
+				response = connection.upload_image(local.directory + "/" + localimage["name"], remote.uri)
+				if "Image" in response:
+					remote_image = AlbumImage.get_album_image(connection, response["Image"]["ImageUri"])
+				else:
+					print "Error uploading: " + response["message"]
+			except exceptions.ConnectionError as e:
+				print "ConnectionError: " + str(e)
+
+		if remote_image:
+			update_image(connection, remote_image, local.json["files"][localimage["name"]])
 
 	for remoteimage in remoteimages:
 		if not find_local_image(local.items, remoteimage):
