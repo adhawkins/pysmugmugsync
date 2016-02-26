@@ -89,8 +89,11 @@ def sync_album(connection, local, remote):
 				do_upload = True
 
 			if localimage["size"] != remote_image.archived_size:
-				print "Sizes don't match - updating"
+				print "Sizes don't match - (" + str(localimage["size"]) + " != " + str(remote_image.archived_size) + ") - updating"
 				do_upload = True
+
+			if do_upload:
+				remote_image.delete_album_image(connection)
 
 		else:
 			print("Not found")
