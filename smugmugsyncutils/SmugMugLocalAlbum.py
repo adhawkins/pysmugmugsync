@@ -29,6 +29,9 @@ class SmugMugLocalAlbum:
 
 		entries=os.listdir(self.directory)
 
+		if "title" in self.json:
+			self.json.pop("title", None)
+
 		for entry in entries:
 			if os.path.isdir(os.path.join(self.directory,entry)):
 				self.children.append(SmugMugLocalAlbum(directory=os.path.join(self.directory,entry), parent=self))
