@@ -42,11 +42,12 @@ class SmugMugLocalAlbum:
 					self.default_album()
 					self.default_album_image(entry)
 
-					self.items.append({
-						"name": entry,
-						"mtime": datetime.fromtimestamp(os.path.getmtime(directory + "/" + entry)),
-						"size": os.path.getsize(directory + "/" + entry)
-					})
+					if entry not in self.json["files"] or not self.json["files"][entry]["skip"]:
+						self.items.append({
+							"name": entry,
+							"mtime": datetime.fromtimestamp(os.path.getmtime(directory + "/" + entry)),
+							"size": os.path.getsize(directory + "/" + entry)
+						})
 
 		if self.items:
 			self.json.pop("node_sort_method", None)
@@ -90,6 +91,9 @@ class SmugMugLocalAlbum:
 
 		if not "title" in self.json["files"][entry]:
 			self.json["files"][entry]["title"]=""
+
+		if not "skip" in self.json["files"][entry]:
+			self.json["files"][entry]["skip"]=False
 
 	def default_json(self):
 		if not "uri" in self.json:
