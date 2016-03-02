@@ -188,11 +188,21 @@ def main():
 	print "Path: " + args.path
 	root_dir=args.path
 
-	config = Config(args.site)
+	config = Config()
+	site_config = {}
+
+	if args.site in config.json:
+		site_config = config.json[args.site]
+
+	save_config = False
+
+	if "exclusions" not in site_config:
+		save_config = True
+		site_config["exclusions"]=[]
 
 	connection = Connection(api_key, api_secret)
 
-	if args.reauth or not config.token or not config.secret:
+	if args.reauth or "token" not in site_config or "secret" not in site_config:
 		auth_url = connection.get_auth_url(access="Full", permissions="Modify")
 
 		print "Visit the following URL and retrieve a verification code:%s%s" % (linesep, auth_url)
@@ -203,16 +213,20 @@ def main():
 
 		at, ats = connection.get_access_token(verifier)
 
-		config.token = at
-		config.secret = ats
-		config.write(args.site)
+		site_config["token"] = at
+		site_config["secret"] = ats
+		save_config = True
 
-	connection.authorise_connection(config.token, config.secret)
+	if save_config:
+		config.json[args.site] = site_config
+		config.write()
+
+	connection.authorise_connection(site_config["token"], site_config["secret"])
 	user = User.get_authorized_user(connection)
 	print "User: " + user.nickname + " (" + user.name + ")"
 	root_node = Node.get_node(connection,user.node)
 
-	root = SmugMugLocalAlbum(args.path)
+	root = SmugMugLocalAlbum(exclusions=site_config["exclusions"], directory=args.path)
 
 	sync_node(connection, root, root_node)
 

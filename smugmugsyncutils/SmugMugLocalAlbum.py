@@ -3,9 +3,10 @@ from copy import deepcopy
 from json import load, dump
 from collections import OrderedDict
 from datetime import datetime
+from fnmatch import fnmatch
 
 class SmugMugLocalAlbum:
-	def __init__(self, directory, parent = None):
+	def __init__(self, exclusions, directory, parent = None):
 		self.directory = directory
 
 		self.__name = os.path.basename(os.path.normpath(directory))
@@ -34,20 +35,36 @@ class SmugMugLocalAlbum:
 
 		for entry in entries:
 			if os.path.isdir(os.path.join(self.directory,entry)):
-				self.children.append(SmugMugLocalAlbum(directory=os.path.join(self.directory,entry), parent=self))
+				self.children.append(SmugMugLocalAlbum(
+					exclusions=exclusions,
+					directory=os.path.join(self.directory,entry),
+					parent=self)
+				)
 			else:
 				if os.path.isfile(os.path.join(self.directory,entry)) and \
-						entry != "smugmug.json" and \
-						os.path.splitext(entry)[1] != ".db":
-					self.default_album()
-					self.default_album_image(entry)
+						entry != "smugmug.json":
 
-					if entry not in self.json["files"] or not self.json["files"][entry]["skip"]:
-						self.items.append({
-							"name": entry,
-							"mtime": datetime.fromtimestamp(os.path.getmtime(directory + "/" + entry)),
-							"size": os.path.getsize(directory + "/" + entry)
-						})
+					exclude = False
+
+					for exclusion in exclusions:
+						if fnmatch(entry, exclusion):
+							exclude = True
+							break
+
+					if exclude:
+						print entry + " in " + self.directory + " is excluded"
+						if "files" in self.json and entry in self.json["files"]:
+							self.json["files"].pop(entry, None)
+					else:
+						self.default_album()
+						self.default_album_image(entry)
+
+						if entry not in self.json["files"] or not self.json["files"][entry]["skip"]:
+							self.items.append({
+								"name": entry,
+								"mtime": datetime.fromtimestamp(os.path.getmtime(directory + "/" + entry)),
+								"size": os.path.getsize(directory + "/" + entry)
+							})
 
 		if self.items:
 			self.json.pop("node_sort_method", None)

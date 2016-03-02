@@ -1,27 +1,22 @@
-import ConfigParser
 import os.path
+from json import load, dump
+from copy import deepcopy
 
 class Config:
-	filename = os.path.expanduser("~/.pysmugmugsync.cfg")
-	token = ""
-	secret = ""
+	__filename = os.path.expanduser("~/.pysmugmugsync.cfg")
+	orig_json = {}
+	json = {}
 
-	def __init__(self, site):
-		config = ConfigParser.RawConfigParser()
-		config.read(self.filename)
+	def __init__(self):
+		if os.path.isfile(self.__filename):
+			with open(self.__filename, "r") as f:
+				try:
+					self.orig_json = load(f)
+					self.json = deepcopy(self.orig_json)
+				except Exception:
+					pass
 
-		if config.has_section(site):
-			self.token = config.get(site, 'token')
-			self.secret = config.get(site, 'secret')
+	def write(self):
+		with open(self.__filename, "w") as f:
+			dump(self.json, f, indent=2)
 
-	def write(self, site):
-		config = ConfigParser.RawConfigParser()
-		config.read(self.filename)
-
-		if not config.has_section(site):
-			config.add_section(site)
-
-		config.set(site, 'token', self.token)
-		config.set(site, 'secret', self.secret)
-		with open(self.filename, 'wb') as configfile:
-			config.write(configfile)
