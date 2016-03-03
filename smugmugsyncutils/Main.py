@@ -1,14 +1,12 @@
 from argparse import ArgumentParser
 from Config import Config
 from smugmugv2py import Connection, User, Node, Album, AlbumImage
-from sys import stdout, stdin
+from sys import stdout, stdin, exit
 from os import linesep
 from json import loads
 from SmugMugLocalAlbum import SmugMugLocalAlbum
 from requests import exceptions
 
-api_key = "LXTk156AmDT0IhjLuDetBUwP9nWKCppg"
-api_secret = "be735fbb3b44698d72506b29e21a434c"
 
 def update_image(connection, remote_image, image_json):
 	image_patch={}
@@ -183,24 +181,40 @@ def main():
 	parser.add_argument("site", help="the site to upload to")
 	parser.add_argument("path", help="the path containing local photos")
 	parser.add_argument("-r", "--reauth", help="force reauthorisation", action="store_true")
+	parser.add_argument("-k", "--api-key", help="smugmug API key")
+	parser.add_argument("-s", "--api-secret", help="smugmug API secret")
 	args = parser.parse_args()
-	print "Site: " + args.site
-	print "Path: " + args.path
+
 	root_dir=args.path
 
 	config = Config()
 	site_config = {}
+
+	if ("api-key" not in config.json and not args.api_key) or \
+		("api-secret" not in config.json and not args.api_secret):
+		print "API key and secret must be in either config or on command line"
+
+		parser.print_help()
+		exit(-1)
 
 	if args.site in config.json:
 		site_config = config.json[args.site]
 
 	save_config = False
 
+	if args.api_key:
+		config.json["api-key"] = args.api_key
+		save_config = True
+
+	if args.api_secret:
+		config.json["api-secret"] = args.api_secret
+		save_config = True
+
 	if "exclusions" not in site_config:
 		save_config = True
 		site_config["exclusions"]=[]
 
-	connection = Connection(api_key, api_secret)
+	connection = Connection(config.json["api-key"], config.json["api-secret"])
 
 	if args.reauth or "token" not in site_config or "secret" not in site_config:
 		auth_url = connection.get_auth_url(access="Full", permissions="Modify")
