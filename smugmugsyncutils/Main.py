@@ -7,6 +7,7 @@ from json import loads
 from SmugMugLocalAlbum import SmugMugLocalAlbum
 from requests import exceptions
 
+VERSION_STR = "0.1"
 
 def update_image(connection, remote_image, image_json):
 	image_patch={}
@@ -214,7 +215,10 @@ def main():
 		save_config = True
 		site_config["exclusions"]=[]
 
-	connection = Connection(config.json["api-key"], config.json["api-secret"])
+	connection = Connection(config.json["api-key"],
+													config.json["api-secret"],
+													user_agent = "pysmugmugsync/" + VERSION_STR
+												)
 
 	if args.reauth or "token" not in site_config or "secret" not in site_config:
 		auth_url = connection.get_auth_url(access="Full", permissions="Modify")
