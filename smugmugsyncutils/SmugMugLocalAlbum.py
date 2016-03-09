@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import datetime
 from fnmatch import fnmatch
 
-class SmugMugLocalAlbum:
+class SmugMugLocalAlbum(object):
 	def __init__(self, exclusions, directory, parent = None):
 		self.directory = directory
 
