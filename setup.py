@@ -12,7 +12,7 @@ setup(
     author_email="andy@gently.org.uk",
 
     # Packages
-    packages=["smugmugsyncutils"],
+    packages=["pysmugmugsync"],
 
     # Include additional files into the package
     include_package_data=True,
@@ -31,6 +31,6 @@ setup(
     ],
 
     entry_points = {
-        "console_scripts": ['pysmugmugsync = smugmugsyncutils.Main:main']
+        "console_scripts": ['pysmugmugsync = pysmugmugsync.Main:main']
     },
 )
