@@ -155,7 +155,7 @@ def sync_node(connection, local, remote):
 			node = find_remote_child_node(remote_children, child.json["uri"], child.json["url_name"])
 			if not node:
 				print "Creating node " + child.json["url_name"]
-				node=remote.create_child_folder(connection, child.json["title"], child.json["url_name"], 'Public')
+				node=remote.create_child_folder(connection, child.json["name"], child.json["url_name"], 'Public')
 
 			child.json["uri"]=node.uri
 

@@ -87,9 +87,6 @@ class SmugMugLocalAlbum(object):
 		if not "keywords" in self.json:
 			self.json["keywords"]=""
 
-		if not "name" in self.json:
-			self.json["name"]=self.__name
-
 		if not "album_sort_method" in self.json:
 			self.json["album_sort_method"]="Filename"
 
@@ -116,8 +113,8 @@ class SmugMugLocalAlbum(object):
 		if not "uri" in self.json:
 			self.json["uri"]=""
 
-		if not "title" in self.json:
-			self.json["title"]=self.__name
+		if not "name" in self.json:
+			self.json["name"]=self.__name
 
 		if not "description" in self.json:
 			self.json["description"]=""
