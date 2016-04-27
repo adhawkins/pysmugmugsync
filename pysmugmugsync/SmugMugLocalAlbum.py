@@ -90,6 +90,9 @@ class SmugMugLocalAlbum(object):
 		if not "album_sort_method" in self.json:
 			self.json["album_sort_method"]="Filename"
 
+		if not "album_sort_direction" in self.json:
+			self.json["album_sort_direction"]="Ascending"
+
 		if not "files" in self.json:
 			self.json["files"]={}
 
@@ -124,6 +127,9 @@ class SmugMugLocalAlbum(object):
 
 		if not "node_sort_method" in self.json:
 			self.json["node_sort_method"]="Name"
+
+		if not "node_sort_direction" in self.json:
+			self.json["node_sort_direction"]="Ascending"
 
 	def save_json(self):
 		if self.json != self.orig_json:

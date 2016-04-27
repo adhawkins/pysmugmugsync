@@ -69,6 +69,9 @@ def sync_album(connection, local, remote):
 		if local.json["album_sort_method"] != remote.sort_method:
 			album_patch["SortMethod"]=local.json["album_sort_method"]
 
+		if local.json["album_sort_direction"] != remote.sort_direction:
+			album_patch["SortDirection"]=local.json["album_sort_direction"]
+
 		if album_patch:
 			remote.change_album(connection, album_patch)
 
@@ -136,6 +139,9 @@ def sync_node(connection, local, remote):
 
 		if local.json["node_sort_method"] != remote.sort_method:
 			node_patch["SortMethod"]=local.json["node_sort_method"]
+
+		if local.json["node_sort_direction"] != remote.sort_direction:
+			node_patch["SortDirection"]=local.json["node_sort_direction"]
 
 		if node_patch:
 			remote.change_node(connection, node_patch)
