@@ -155,7 +155,7 @@ def sync_node(connection, local, remote):
 
 			child.json["uri"]=node.uri
 
-			album=Album.get_album(connection, node.album)
+			album=Album.get_album(connection, node.album_uri)
 			sync_album(connection, child, album)
 		else:
 			node = find_remote_child_node(remote_children, child.json["uri"], child.json["url_name"])
